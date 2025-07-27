@@ -1,4 +1,7 @@
 use cgmath::{EuclideanSpace, InnerSpace, Matrix4, Point3, Rad, Vector3};
+use crate::collision::Aabb;
+
+pub const CAMERA_HALF_SIZE: f32 = 0.1;
 
 pub enum CameraMovement {
     Forward,
@@ -51,6 +54,30 @@ impl Camera {
         }
     }
 
+    pub fn process_keyboard_collision(&mut self, direction: CameraMovement, dt: f32, colliders: &[Aabb]) {
+        let velocity = self.speed * dt;
+        let front = self.front();
+        let right = front.cross(Vector3::unit_z()).normalize();
+        let mut new_pos = self.position;
+        match direction {
+            CameraMovement::Forward => new_pos += front * velocity,
+            CameraMovement::Backward => new_pos -= front * velocity,
+            CameraMovement::Left => new_pos -= right * velocity,
+            CameraMovement::Right => new_pos += right * velocity,
+            CameraMovement::Up => new_pos += Vector3::unit_z() * velocity,
+            CameraMovement::Down => new_pos -= Vector3::unit_z() * velocity,
+        }
+
+        let proposed = Aabb::new(
+            new_pos - Vector3::new(CAMERA_HALF_SIZE, CAMERA_HALF_SIZE, CAMERA_HALF_SIZE),
+            new_pos + Vector3::new(CAMERA_HALF_SIZE, CAMERA_HALF_SIZE, CAMERA_HALF_SIZE),
+        );
+
+        if !colliders.iter().any(|c| proposed.intersects(c)) {
+            self.position = new_pos;
+        }
+    }
+
     pub fn process_mouse(&mut self, dx: f32, dy: f32) {
         self.yaw += dx * self.sensitivity;
         self.pitch = (self.pitch + dy * self.sensitivity).clamp(-89.0, 89.0);
@@ -65,5 +92,12 @@ impl Camera {
             pitch.0.sin(),
         )
         .normalize()
+    }
+
+    pub fn aabb(&self) -> Aabb {
+        Aabb::new(
+            self.position - Vector3::new(CAMERA_HALF_SIZE, CAMERA_HALF_SIZE, CAMERA_HALF_SIZE),
+            self.position + Vector3::new(CAMERA_HALF_SIZE, CAMERA_HALF_SIZE, CAMERA_HALF_SIZE),
+        )
     }
 }

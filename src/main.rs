@@ -1,8 +1,10 @@
 mod vulkan_app;
 mod camera;
+mod collision;
 
 use vulkan_app::{VulkanApp, HEIGHT, WIDTH};
 use camera::{Camera, CameraMovement};
+use collision::Aabb;
 use winit::event::{Event, WindowEvent, DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
@@ -17,6 +19,10 @@ fn main() {
 
     let mut app = VulkanApp::new(&window);
     let mut camera = Camera::new(cgmath::Vector3::new(2.0, 2.0, 2.0), -135.0, -35.0);
+    let cube_collider = Aabb::new(
+        cgmath::Vector3::new(-0.5, -0.5, -0.5),
+        cgmath::Vector3::new(0.5, 0.5, 0.5),
+    );
 
     let mut input_state = InputState::default();
     let mut last_frame = std::time::Instant::now();
@@ -91,12 +97,13 @@ fn main() {
                 let dt = now.duration_since(last_frame).as_secs_f32();
                 last_frame = now;
 
-                if input_state.forward { camera.process_keyboard(CameraMovement::Forward, dt); }
-                if input_state.backward { camera.process_keyboard(CameraMovement::Backward, dt); }
-                if input_state.left { camera.process_keyboard(CameraMovement::Left, dt); }
-                if input_state.right { camera.process_keyboard(CameraMovement::Right, dt); }
-                if input_state.up { camera.process_keyboard(CameraMovement::Up, dt); }
-                if input_state.down { camera.process_keyboard(CameraMovement::Down, dt); }
+                let colliders = [cube_collider];
+                if input_state.forward { camera.process_keyboard_collision(CameraMovement::Forward, dt, &colliders); }
+                if input_state.backward { camera.process_keyboard_collision(CameraMovement::Backward, dt, &colliders); }
+                if input_state.left { camera.process_keyboard_collision(CameraMovement::Left, dt, &colliders); }
+                if input_state.right { camera.process_keyboard_collision(CameraMovement::Right, dt, &colliders); }
+                if input_state.up { camera.process_keyboard_collision(CameraMovement::Up, dt, &colliders); }
+                if input_state.down { camera.process_keyboard_collision(CameraMovement::Down, dt, &colliders); }
 
                 app.draw_frame(&window, &camera);
             }
